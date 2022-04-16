@@ -1,19 +1,25 @@
-let firstgenerationSize = 1;
-let childrenPGen = 2;
-let maxGenerations = 3;
-let sequence = generateIdSequenz(1000);
-let nodes = initNodes();
+let firstgenerationSize: number = 1;
+let childrenPGen: number = 2;
+let maxGenerations: number = 48;
+
+let firstbornOfLastGenerationReached: boolean = false;
+
+let sequence: number[] = generateIdSequenz(1000);
 
 run();
 
 function run() {
   console.log('Start');
-  printNodes(nodes);
+  let nodes = initNodes();
+  printNodes(nodes, 0);
   console.log('Finding Node:');
   console.log(findeNode(nodes));
-  let duplicates = findDuplicates(nodes);
-  console.log('Duplicates found:');
-  printNodes(duplicates);
+
+  console.log('Creating/Printing IdMap: ');
+  let idMap = createIdMap(nodes, new Map<number, MyNode>());
+  printIdMap(idMap);
+  console.log('Creating Json: ');
+  console.log(createJSON(idMap));
   console.log('End');
 }
 
@@ -21,42 +27,24 @@ function run() {
 function findeNode(nodes: Array<MyNode>): MyNode {
   return null;
 }
-
 function initNodes() {
   let nodes = new Array();
   for (var i = 0; i < firstgenerationSize; i++) {
-    nodes.push(generateNode());
+    nodes.push(generateNode(0));
   }
-  nodes = appendChildren(nodes, 0);
   return nodes;
-}
-
-function appendChildren(nodes: Array<MyNode>, generation: number) {
-  if (generation === maxGenerations) {
-    return nodes;
-  }
-  let children = new Array<MyNode>();
-  for (var i = 0; i < nodes.length; i++) {
-    for (var k = 0; k < nodes[i].children.length; k++) {
-      children.push(generateNodeWithId(nodes[i].children[k]));
-    }
-  }
-  nodes = appendChildren(children, generation + 1);
-  nodes = nodes.concat(children);
-  return nodes;
-}
-
-function generateChildrenIds(amount: number): Array<number> {
-  let ids = new Array(amount);
-  for (var i = 0; i < amount; i++) {
-    ids[i] = sequence.pop();
-  }
-  return ids;
 }
 
 interface MyNode {
   id: number;
+  children: Array<MyNode>;
+  generation: number;
+}
+
+interface MyFlatNode {
+  id: number;
   children: number[];
+  generation: number;
 }
 
 function generateIdSequenz(size: number): Array<number> {
@@ -67,9 +55,15 @@ function generateIdSequenz(size: number): Array<number> {
   return idSequence;
 }
 
-function printNodes(nodes: Array<MyNode>): void {
+function printNodes(nodes: Array<MyNode>, generation: number): void {
+  console.log('Printing Generation ' + generation + ':');
   for (var i = 0; i < nodes.length; i++) {
     console.log(nodes[i]);
+    if (nodes[i].children !== null) {
+      for (var k = 0; k < nodes[i].children.length; k++) {
+        printNodes(nodes[i].children, generation + 1);
+      }
+    }
   }
 }
 
@@ -77,30 +71,67 @@ function getRandomInt(max: number): number {
   return Math.floor(Math.random() * max);
 }
 
-function generateNode(): MyNode {
-  return {
+function generateNode(generation: number): MyNode {
+  let node = {
     id: sequence.pop(),
-    //children: generateChildrenIds(getRandomInt(childrenPGen)),
-    children: generateChildrenIds(childrenPGen),
-  };
+    children: null,
+    generation: generation,
+  } as MyNode;
+
+  if (generation === maxGenerations) {
+    firstbornOfLastGenerationReached = true;
+  }
+
+  if (generation !== maxGenerations && !firstbornOfLastGenerationReached) {
+    if (generation < 3) {
+      node.children = new Array<MyNode>(childrenPGen);
+    } else {
+      node.children = new Array<MyNode>(getRandomInt(childrenPGen));
+    }
+    for (var i = 0; i < node.children.length; i++) {
+      node.children[i] = generateNode(generation + 1);
+    }
+  }
+  return node;
 }
 
-function generateNodeWithId(id: number): MyNode {
-  return {
-    id: id,
-    children: generateChildrenIds(getRandomInt(childrenPGen)),
-  };
-}
-
-function findDuplicates(nodes: Array<MyNode>): Array<MyNode> {
-  let idMap = new Map<number, MyNode>();
-  let duplicates: Array<MyNode> = new Array<MyNode>();
+function createIdMap(
+  nodes: Array<MyNode>,
+  idMap: Map<number, MyNode>
+): Map<number, MyNode> {
   for (var i = 0; i < nodes.length; i++) {
     if (idMap.has(nodes[i].id)) {
-      duplicates.push(nodes[i]);
+      console.log('Duplicate found! -> ' + nodes[i]);
     } else {
       idMap.set(nodes[i].id, nodes[i]);
     }
+    if (nodes[i].children != null) {
+      idMap = createIdMap(nodes[i].children, idMap);
+    }
   }
-  return duplicates;
+  return idMap;
+}
+
+function printIdMap(idMap: Map<number, MyNode>) {
+  for (let [key, value] of idMap) {
+    console.log(key, value);
+  }
+}
+
+function createJSON(idMap: Map<number, MyNode>) {
+  let flatNodes = new Array<MyFlatNode>();
+  for (let [key, value] of idMap) {
+    let flatNode = {
+      id: key,
+      children: undefined,
+      generation: value.generation,
+    } as MyFlatNode;
+    if (value.children !== null) {
+      flatNode.children = value.children.map(function (child: { id: number }) {
+        return child.id;
+      });
+    }
+    flatNodes.push(flatNode);
+  }
+  return JSON.stringify(flatNodes);
 }
