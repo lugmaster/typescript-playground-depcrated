@@ -8,7 +8,7 @@ run();
 
 function run() {
   console.log('Start');
-  printNodes(nodes);
+  //printNodes(nodes);
   console.log('Finding Node:');
   console.log(findeNode(nodes));
   let duplicates = findDuplicates(nodes);
