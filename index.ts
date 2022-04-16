@@ -1,8 +1,8 @@
 let firstgenerationSize: number = 1;
-let childrenPGen: number = 2;
+let childrenPGen: number = 5;
 let maxGenerations: number = 48;
 
-let firstbornOfLastGenerationReached: boolean = false;
+var firstbornOfLastGenerationReached: boolean = false;
 
 let sequence: number[] = generateIdSequenz(1000);
 
@@ -11,7 +11,7 @@ run();
 function run() {
   console.log('Start');
   let nodes = initNodes();
-  printNodes(nodes, 0);
+  //printNodes(nodes, 0);
   console.log('Finding Node:');
   console.log(findeNode(nodes));
 
@@ -79,12 +79,19 @@ function generateNode(generation: number): MyNode {
   } as MyNode;
 
   if (generation === maxGenerations) {
+    console.log(
+      'Reached last Gneration( ' +
+        generation +
+        ' / ' +
+        maxGenerations +
+        ' ) - Stopping'
+    );
     firstbornOfLastGenerationReached = true;
   }
 
   if (generation !== maxGenerations && !firstbornOfLastGenerationReached) {
     if (generation < 3) {
-      node.children = new Array<MyNode>(childrenPGen);
+      node.children = new Array<MyNode>(generation + 1);
     } else {
       node.children = new Array<MyNode>(getRandomInt(childrenPGen));
     }
